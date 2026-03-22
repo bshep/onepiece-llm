@@ -71,6 +71,8 @@ def parse_xml_to_jsonl(xml_path: str, output_path: str):
                         page_type = None
                         arc = None
                         
+                        stripped_text = text.strip()
+                        
                         if title.startswith("Chapter "):
                             page_type = "chapter"
                             arc_match = arc_pattern.search(text)
@@ -82,8 +84,19 @@ def parse_xml_to_jsonl(xml_path: str, output_path: str):
                             arc = arc_match.group(1) if arc_match else "Unknown Arc"
                         elif title.endswith(" Arc"):
                             page_type = "arc"
+                            arc = title
                         elif title.endswith(" Saga"):
                             page_type = "saga"
+                        elif "{{Crew Box" in stripped_text:
+                            page_type = "crew"
+                        elif "{{Organization Box" in stripped_text:
+                            page_type = "organization"
+                        elif stripped_text.startswith("{{" + title + " Tabs Top}}"):
+                            # If it's a "Pirates" or "Army" or "Government" or "Family" or "Alliance" it's likely a group
+                            if any(word in title for word in ["Pirates", "Army", "Government", "Family", "Alliance", "Group", "Marines", "Cipher Pol"]):
+                                page_type = "crew"
+                            else:
+                                page_type = "character"
                         
                         page_data = {
                             "title": title,
