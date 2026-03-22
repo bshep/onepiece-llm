@@ -7,3 +7,5 @@ python-dotenv
 langchain-text-splitters
 openai
 langchain-openai
+chromadb
+langchain-chroma

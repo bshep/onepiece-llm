@@ -1,1 +1,3 @@
 dumps/*
+chroma_db/*
+.env
