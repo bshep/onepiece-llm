@@ -6,6 +6,8 @@ from langchain_chroma import Chroma
 # Load environment variables (API keys)
 load_dotenv()
 
+from src.utils.one_piece_data import get_visible_arcs
+
 class OnePieceRetriever:
     def __init__(self, persist_directory="chroma_db", collection_name="one_piece_lore"):
         """Initializes the ChromaDB retriever with OpenAI embeddings."""
@@ -16,9 +18,20 @@ class OnePieceRetriever:
             persist_directory=persist_directory
         )
 
-    def retrieve(self, query: str, k: int = 5, filter_metadata: dict = None):
+    def retrieve(self, query: str, k: int = 5, filter_metadata: dict = None, current_arc: str = None):
         """Retrieves the top k most relevant chunks from ChromaDB."""
-        # Optional metadata filtering (e.g., {"page_type": "chapter"})
+        # Handle arc filtering for spoilers
+        if current_arc:
+            visible_arcs = get_visible_arcs(current_arc)
+            # Combine with other metadata filters
+            if filter_metadata is None:
+                filter_metadata = {}
+            
+            # $in is a ChromaDB operator to match any value in a list
+            # We must be careful if we have multiple filters.
+            # For now, let's just use arc filtering.
+            filter_metadata["arc"] = {"$in": visible_arcs + ["unknown"]}
+            
         results = self.vector_db.similarity_search(
             query, 
             k=k, 

@@ -9,10 +9,10 @@ class OnePieceRAG:
         self.retriever = OnePieceRetriever(persist_directory, collection_name)
         self.generator = OnePieceGenerator(model_name)
 
-    def answer_question(self, question: str, k: int = 5, filter_metadata: dict = None):
+    def answer_question(self, question: str, k: int = 5, filter_metadata: dict = None, current_arc: str = None):
         """Retrieves and generates an answer."""
-        print(f"Retrieving context for: {question}...")
-        docs = self.retriever.retrieve(question, k=k, filter_metadata=filter_metadata)
+        print(f"Retrieving context for: {question} (Current Arc: {current_arc or 'All'})...")
+        docs = self.retriever.retrieve(question, k=k, filter_metadata=filter_metadata, current_arc=current_arc)
         
         print(f"Generating answer based on {len(docs)} retrieved chunks...")
         answer = self.generator.generate(question, docs)
