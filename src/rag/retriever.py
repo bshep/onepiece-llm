@@ -23,14 +23,13 @@ class OnePieceRetriever:
         # Handle arc filtering for spoilers
         if current_arc:
             visible_arcs = get_visible_arcs(current_arc)
-            # Combine with other metadata filters
             if filter_metadata is None:
                 filter_metadata = {}
             
-            # $in is a ChromaDB operator to match any value in a list
-            # We must be careful if we have multiple filters.
-            # For now, let's just use arc filtering.
-            filter_metadata["arc"] = {"$in": visible_arcs + ["unknown"]}
+            # STRICT FILTER: only show arcs we have seen. 
+            # We EXCLUDE 'unknown' to prevent spoilers from items/chars whose 
+            # intro arc wasn't caught (safer to be missing info than to spoil).
+            filter_metadata["arc"] = {"$in": visible_arcs}
             
         results = self.vector_db.similarity_search(
             query, 
