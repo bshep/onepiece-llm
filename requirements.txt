@@ -1,0 +1,9 @@
+requests
+tqdm
+lxml
+beautifulsoup4
+pandas
+python-dotenv
+langchain-text-splitters
+openai
+langchain-openai
