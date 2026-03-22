@@ -75,6 +75,11 @@ def parse_xml_to_jsonl(xml_path: str, output_path: str):
                             page_type = "chapter"
                             arc_match = arc_pattern.search(text)
                             arc = arc_match.group(1) if arc_match else "Unknown Arc"
+                        elif title.startswith("Episode "):
+                            page_type = "episode"
+                            # Episodes also often have arc templates at the bottom
+                            arc_match = arc_pattern.search(text)
+                            arc = arc_match.group(1) if arc_match else "Unknown Arc"
                         elif title.endswith(" Arc"):
                             page_type = "arc"
                         elif title.endswith(" Saga"):
