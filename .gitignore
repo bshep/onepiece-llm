@@ -1,3 +1,5 @@
 dumps/*
 chroma_db/*
 .env
+.DS_Store
+*.pyc
