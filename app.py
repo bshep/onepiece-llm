@@ -11,15 +11,28 @@ load_dotenv()
 
 # Constants
 DB_PATH = "chroma_db"
-# This URL should be set in .streamlit/secrets.toml or Streamlit Cloud Secrets
+VERSION_FILE = ".db_version"
+# This URL and Version should be set in .streamlit/secrets.toml or Streamlit Cloud Secrets
 DB_ZIP_URL = st.secrets.get("DB_ZIP_URL", "https://your-placeholder-url.com/chroma_db.zip")
+DB_VERSION = st.secrets.get("DB_VERSION", "v1")
 
 def download_and_unzip_db():
-    """Downloads the vector database from S3 if it doesn't exist locally."""
-    if not os.path.exists(DB_PATH):
-        with st.status("Initializing Lore Database...", expanded=True) as status:
-            st.write("Downloading data from storage...")
+    """Downloads the vector database from S3 if it doesn't exist or version is outdated."""
+    local_version = ""
+    if os.path.exists(VERSION_FILE):
+        with open(VERSION_FILE, "r") as f:
+            local_version = f.read().strip()
+
+    # Trigger download if DB folder is missing OR version is different
+    if not os.path.exists(DB_PATH) or local_version != DB_VERSION:
+        with st.status("Updating Lore Database...", expanded=True) as status:
+            st.write(f"New version detected ({DB_VERSION}). Downloading...")
             try:
+                # Remove old DB if it exists
+                if os.path.exists(DB_PATH):
+                    import shutil
+                    shutil.rmtree(DB_PATH)
+                
                 response = requests.get(DB_ZIP_URL, stream=True)
                 response.raise_for_status()
                 zip_path = "chroma_db.zip"
@@ -31,10 +44,15 @@ def download_and_unzip_db():
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                     zip_ref.extractall(".")
                 os.remove(zip_path)
-                status.update(label="Database Ready!", state="complete", expanded=False)
+                
+                # Update local version file
+                with open(VERSION_FILE, "w") as f:
+                    f.write(DB_VERSION)
+                    
+                status.update(label=f"Database Updated to {DB_VERSION}!", state="complete", expanded=False)
             except Exception as e:
-                status.update(label="Database Error", state="error", expanded=True)
-                st.error(f"Failed to download database: {e}")
+                status.update(label="Database Update Failed", state="error", expanded=True)
+                st.error(f"Error: {e}")
                 return False
     return True
 
