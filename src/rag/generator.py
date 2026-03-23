@@ -34,9 +34,11 @@ class OnePieceGenerator:
 
     def generate(self, question: str, retrieved_docs: list):
         """Generates an answer based on the retrieved context."""
-        # Combine retrieved content into a single string
+        # Combine retrieved content into a single string with arc and alias metadata
         context_str = "\n\n---\n\n".join([
-            f"Source: {doc.metadata['title']} (Arc: {doc.metadata.get('arc', 'N/A')})\nContent: {doc.page_content}"
+            f"Source: {doc.metadata['title']} (Arc: {doc.metadata.get('arc', 'N/A')})\n"
+            f"Aliases: {', '.join(doc.metadata.get('aliases', []))}\n"
+            f"Content: {doc.page_content}"
             for doc in retrieved_docs
         ])
         

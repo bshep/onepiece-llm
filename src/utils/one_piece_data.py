@@ -1,3 +1,6 @@
+import json
+import os
+
 # Chronological order of One Piece arcs
 ONE_PIECE_ARCS = [
     "Romance Dawn Arc",
@@ -60,18 +63,41 @@ def get_visible_arcs(current_arc):
     idx = ONE_PIECE_ARCS.index(current_arc)
     return ONE_PIECE_ARCS[:idx + 1]
 
-def is_spoiler(arc_name, current_arc):
-    """Checks if an arc is a spoiler based on the current arc."""
-    if arc_name == "unknown" or arc_name is None:
-        return False
+class AliasResolver:
+    def __init__(self, alias_file="dumps/aliases.json"):
+        self.alias_map = {} # alias -> main_name
+        if os.path.exists(alias_file):
+            try:
+                with open(alias_file, "r") as f:
+                    data = json.load(f)
+                    for main_name, aliases in data.items():
+                        for alias in aliases:
+                            # Lowercase for case-insensitive matching
+                            self.alias_map[alias.lower()] = main_name
+            except Exception as e:
+                print(f"Warning: Could not load aliases: {e}")
+
+    def resolve(self, name):
+        """Resolves an alias to the main name."""
+        return self.alias_map.get(name.lower(), name)
+
+    def expand_query(self, query):
+        """
+        Attempts to find aliases in the query and adds the main name to it.
+        This is a simple implementation; better ones might use NER or keyword extraction.
+        """
+        words = query.split()
+        expanded_terms = set()
         
-    if current_arc not in ONE_PIECE_ARCS:
-        return False
+        # Check for multi-word aliases (sliding window)
+        # We'll check windows of 1-3 words
+        words_lower = [w.lower().strip(",.?!") for w in words]
+        for n in range(1, 4):
+            for i in range(len(words_lower) - n + 1):
+                phrase = " ".join(words_lower[i:i+n])
+                if phrase in self.alias_map:
+                    expanded_terms.add(self.alias_map[phrase])
         
-    try:
-        current_idx = ONE_PIECE_ARCS.index(current_arc)
-        arc_idx = ONE_PIECE_ARCS.index(arc_name)
-        return arc_idx > current_idx
-    except ValueError:
-        # If the arc name is not in our list, we play it safe
-        return False
+        if expanded_terms:
+            return query + " (" + ", ".join(expanded_terms) + ")"
+        return query

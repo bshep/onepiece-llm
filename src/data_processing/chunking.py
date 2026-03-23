@@ -33,6 +33,7 @@ def chunk_data(input_path: str, output_path: str, chunk_size: int, chunk_overlap
                 title = page.get("title", "Unknown")
                 page_type = page.get("page_type")
                 arc = page.get("arc")
+                aliases = page.get("aliases", [])
                 content = page.get("content", "")
                 
                 if not content:
@@ -45,6 +46,7 @@ def chunk_data(input_path: str, output_path: str, chunk_size: int, chunk_overlap
                         "title": title,
                         "page_type": page_type,
                         "arc": arc,
+                        "aliases": aliases,
                         "chunk_index": i,
                         "total_chunks": len(chunks),
                         "content": chunk_text

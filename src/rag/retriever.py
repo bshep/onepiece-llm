@@ -6,7 +6,7 @@ from langchain_chroma import Chroma
 # Load environment variables (API keys)
 load_dotenv()
 
-from src.utils.one_piece_data import get_visible_arcs
+from src.utils.one_piece_data import get_visible_arcs, AliasResolver
 
 class OnePieceRetriever:
     def __init__(self, persist_directory="chroma_db", collection_name="one_piece_lore"):
@@ -17,9 +17,15 @@ class OnePieceRetriever:
             embedding_function=self.embeddings,
             persist_directory=persist_directory
         )
+        self.alias_resolver = AliasResolver()
 
     def retrieve(self, query: str, k: int = 5, filter_metadata: dict = None, current_arc: str = None):
         """Retrieves the top k most relevant chunks from ChromaDB."""
+        # Expand query using aliases (e.g., "Mr. 8" -> "Mr. 8 (Igaram)")
+        expanded_query = self.alias_resolver.expand_query(query)
+        if expanded_query != query:
+            print(f"Expanded query: {expanded_query}")
+        
         # Handle arc filtering for spoilers
         if current_arc:
             visible_arcs = get_visible_arcs(current_arc)
@@ -27,12 +33,10 @@ class OnePieceRetriever:
                 filter_metadata = {}
             
             # STRICT FILTER: only show arcs we have seen. 
-            # We EXCLUDE 'unknown' to prevent spoilers from items/chars whose 
-            # intro arc wasn't caught (safer to be missing info than to spoil).
             filter_metadata["arc"] = {"$in": visible_arcs}
             
         results = self.vector_db.similarity_search(
-            query, 
+            expanded_query, 
             k=k, 
             filter=filter_metadata
         )
