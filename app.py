@@ -87,7 +87,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # React to user input
-if prompt := st.chat_input("What is Gear 5?"):
+if prompt := st.chat_input("Who is Luffy?"):
     if not st.session_state.get("current_arc"):
         st.error("Please set your current arc in the sidebar before asking questions!")
     elif not rag:
