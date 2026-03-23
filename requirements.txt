@@ -11,4 +11,4 @@ chromadb
 langchain-chroma
 langchain
 langchain-community
-streamlit
+streamlit>=1.23.0
