@@ -59,20 +59,37 @@ st.markdown("Ask anything about the world of One Piece! (Spoiler-free)")
 with st.sidebar:
     st.header("Settings")
     
+    # Initialize arc from query params if available
+    query_arc = st.query_params.get("arc", "Select an Arc")
+    
+    # Determine the index for the selectbox
+    arc_options = ["Select an Arc"] + ONE_PIECE_ARCS + ["Caught Up"]
+    try:
+        default_index = arc_options.index(query_arc)
+    except ValueError:
+        default_index = 0
+
     # Arc Selection
-    current_arc = st.selectbox(
+    selected_arc = st.selectbox(
         "Where are you in the story?",
-        options=["Select an Arc"] + ONE_PIECE_ARCS + ["Caught Up"],
-        index=0
+        options=arc_options,
+        index=default_index
     )
     
-    if current_arc == "Select an Arc":
-        st.warning("Please select your current arc to enable chat.")
-        st.session_state.current_arc = None
-    elif current_arc == "Caught Up":
-        st.session_state.current_arc = ONE_PIECE_ARCS[-1]
+    # Update query params when selection changes
+    if selected_arc != "Select an Arc":
+        st.query_params["arc"] = selected_arc
+        if selected_arc == "Caught Up":
+            st.session_state.current_arc = ONE_PIECE_ARCS[-1]
+        else:
+            st.session_state.current_arc = selected_arc
     else:
-        st.session_state.current_arc = current_arc
+        st.session_state.current_arc = None
+        if "arc" in st.query_params:
+            del st.query_params["arc"]
+    
+    if not st.session_state.current_arc:
+        st.warning("Please select your current arc to enable chat.")
 
     st.divider()
     st.info(f"Database Status: {'Connected' if rag else 'Disconnected'}")
