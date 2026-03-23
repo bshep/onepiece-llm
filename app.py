@@ -11,34 +11,49 @@ load_dotenv()
 
 # Constants
 DB_PATH = "chroma_db"
-DB_ZIP_URL = st.secrets.get("DB_ZIP_URL", "https://your-placeholder-url.com/chroma_db.zip") # Placeholder for S3 URL
+# This URL should be set in .streamlit/secrets.toml or Streamlit Cloud Secrets
+DB_ZIP_URL = st.secrets.get("DB_ZIP_URL", "https://your-placeholder-url.com/chroma_db.zip")
 
 def download_and_unzip_db():
     """Downloads the vector database from S3 if it doesn't exist locally."""
     if not os.path.exists(DB_PATH):
-        st.info("Downloading One Piece Lore Database... This may take a minute.")
-        try:
-            response = requests.get(DB_ZIP_URL, stream=True)
-            zip_path = "chroma_db.zip"
-            with open(zip_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(".")
-            os.remove(zip_path)
-            st.success("Database ready!")
-        except Exception as e:
-            st.error(f"Failed to download database: {e}")
-            st.info("Check if DB_ZIP_URL is correctly set in Streamlit Secrets.")
-            return False
+        with st.status("Initializing Lore Database...", expanded=True) as status:
+            st.write("Downloading data from storage...")
+            try:
+                response = requests.get(DB_ZIP_URL, stream=True)
+                response.raise_for_status()
+                zip_path = "chroma_db.zip"
+                with open(zip_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                
+                st.write("Extracting files...")
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(".")
+                os.remove(zip_path)
+                status.update(label="Database Ready!", state="complete", expanded=False)
+            except Exception as e:
+                status.update(label="Database Error", state="error", expanded=True)
+                st.error(f"Failed to download database: {e}")
+                return False
     return True
+
+# Initialize RAG Pipeline (Cached so it only runs once per session)
+@st.cache_resource(show_spinner=False)
+def load_rag_instance():
+    if download_and_unzip_db():
+        return OnePieceRAG()
+    return None
 
 # Page Config
 st.set_page_config(page_title="One Piece Lore Agent", page_icon="🏴‍☠️")
 
+# Initialize RAG at the top level (but it's cached)
+# This will trigger the download only if the DB is missing
+rag = load_rag_instance()
+
 st.title("🏴‍☠️ One Piece Lore Agent")
-st.markdown("Ask anything about the world of One Piece! (Spoiler-free based on your progress)")
+st.markdown("Ask anything about the world of One Piece! (Spoiler-free)")
 
 # Sidebar for configuration
 with st.sidebar:
@@ -60,15 +75,7 @@ with st.sidebar:
         st.session_state.current_arc = current_arc
 
     st.divider()
-    st.markdown("Created by ElBrucio. Data sourced from the One Piece Wiki.")
-
-# Initialize RAG Pipeline (Cached to avoid reloading on every interaction)
-@st.cache_resource
-def get_rag():
-    # Only try to initialize if the DB exists or was successfully downloaded
-    if download_and_unzip_db():
-        return OnePieceRAG()
-    return None
+    st.info(f"Database Status: {'Connected' if rag else 'Disconnected'}")
 
 # Session State for Chat History
 if "messages" not in st.session_state:
@@ -80,27 +87,19 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # React to user input
-if prompt := st.chat_input("Who is Luffy?"):
-    # Check if arc is set
+if prompt := st.chat_input("What is Gear 5?"):
     if not st.session_state.get("current_arc"):
         st.error("Please set your current arc in the sidebar before asking questions!")
+    elif not rag:
+        st.error("The Lore Database is not available. Please check your configuration.")
     else:
-        # Display user message in chat message container
+        # Display user message
         st.chat_message("user").markdown(prompt)
-        # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        rag = get_rag()
-        if rag:
-            with st.spinner("Thinking..."):
-                # Call RAG pipeline with arc filtering
+        # Generate and display assistant response
+        with st.chat_message("assistant"):
+            with st.spinner("Searching the Grand Line..."):
                 answer = rag.answer_question(prompt, current_arc=st.session_state.current_arc)
-                
-                # Display assistant response in chat message container
-                with st.chat_message("assistant"):
-                    st.markdown(answer)
-                
-                # Add assistant response to chat history
+                st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
-        else:
-            st.error("RAG Pipeline could not be initialized. Please check database settings.")
