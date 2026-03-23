@@ -3,3 +3,5 @@ chroma_db/*
 .env
 .DS_Store
 *.pyc
+.streamlit/secrets.toml
+chroma_db.zip
